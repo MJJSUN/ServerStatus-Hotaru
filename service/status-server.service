@@ -1,11 +1,17 @@
 [Unit]
-Description=ServerStatus-Server
-Documentation=https://github.com/cokemine/ServerStatus-Hotaru
-After=network.target
+Description=ServerStatus Server
+After=network-online.target remote-fs.target
+Wants=network-online.target
+
 [Service]
+Type=simple
+WorkingDirectory=/usr/local/ServerStatus/server
 EnvironmentFile=/usr/local/ServerStatus/server/config.conf
-ExecStart=/usr/local/ServerStatus/server/sergate --config=/usr/local/ServerStatus/server/config.json --web-dir=/usr/local/ServerStatus/web --port $PORT
+ExecStart=/usr/local/ServerStatus/server/sergate --config=/usr/local/ServerStatus/server/config.json --web-dir=/usr/local/ServerStatus/web --port=${PORT}
 ExecReload=/bin/kill -HUP $MAINPID
 Restart=on-failure
+RestartSec=5s
+LimitNOFILE=51200
+
 [Install]
 WantedBy=multi-user.target
