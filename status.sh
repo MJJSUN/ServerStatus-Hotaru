@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env bash
+#!/usr/bin/env bash
 PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:~/bin
 export PATH
 
@@ -28,15 +28,15 @@ jq_file="${file}/jq"
 [[ ! -e ${jq_file} ]] && jq_file="/usr/bin/jq"
 region_json="${file}/region.json"
 
-github_prefix="https://raw.githubusercontent.com/MJJSUN/ServerStatus-Hotaru/master"
-link_prefix=${github_prefix}
+link_prefix="https://raw.githubusercontent.com/MJJSUN/ServerStatus-Hotaru/master"
 
 Green_font_prefix="\033[32m" && Red_font_prefix="\033[31m" && Red_background_prefix="\033[41;37m" && Font_color_suffix="\033[0m"
-Info="${Green_font_prefix}[淇℃伅]${Font_color_suffix}"
-Error="${Red_font_prefix}[閿欒]${Font_color_suffix}"
-Tip="${Green_font_prefix}[娉ㄦ剰]${Font_color_suffix}"
+Info="${Green_font_prefix}[信息]${Font_color_suffix}"
+Error="${Red_font_prefix}[错误]${Font_color_suffix}"
+Tip="${Green_font_prefix}[注意]${Font_color_suffix}"
 
-#妫€鏌ョ郴缁?check_sys() {
+#检查系统
+check_sys() {
   if [[ -f /etc/redhat-release ]]; then
     release="centos"
   elif grep -q -E -i "debian|ubuntu" /etc/issue; then
@@ -50,15 +50,15 @@ Tip="${Green_font_prefix}[娉ㄦ剰]${Font_color_suffix}"
   elif grep -q -E -i "centos|red hat|redhat" /proc/version; then
     release="centos"
   else
-    echo -e "ServerStatus 鏆備笉鏀寔璇inux鍙戣鐗?
+    echo -e "ServerStatus 暂不支持该Linux发行版"
   fi
   bit=$(uname -m)
 }
 check_installed_server_status() {
-  [[ ! -e "${server_file}/sergate" ]] && echo -e "${Error} ServerStatus 鏈嶅姟绔病鏈夊畨瑁咃紝璇锋鏌?!" && exit 1
+  [[ ! -e "${server_file}/sergate" ]] && echo -e "${Error} ServerStatus 服务端没有安装，请检查 !" && exit 1
 }
 check_installed_client_status() {
-  [[ ! -e "${client_file}/status-client.py" ]] && echo -e "${Error} ServerStatus 瀹㈡埛绔病鏈夊畨瑁咃紝璇锋鏌?!" && exit 1
+  [[ ! -e "${client_file}/status-client.py" ]] && echo -e "${Error} ServerStatus 客户端没有安装，请检查 !" && exit 1
 }
 check_pid_server() {
   #PID=$(ps -ef | grep "sergate" | grep -v grep | grep -v ".sh" | grep -v "init.d" | grep -v "service" | awk '{print $2}')
@@ -69,7 +69,8 @@ check_pid_client() {
   PID=$(pgrep -f "status-client.py")
 }
 check_region() {
-  # 濡傛灉鎵句笉鍒?region 鏂囦欢, 榛樿涓嶆娴?  [[ ! -e "${region_json}" ]] && return 0
+  # 如果找不到 region 文件, 默认不检测
+  [[ ! -e "${region_json}" ]] && return 0
   if ${jq_file} "[.countries | has(\"${region_s}}\")]" "${region_json}" | grep -q 'true' >/dev/null 2>&1; then
     return 0
   elif grep -qw "${region_s}" "${region_json}"; then
@@ -81,17 +82,17 @@ check_region() {
 }
 Download_Server_Status_server() {
   cd "/tmp" || exit 1
-  [[ ${mirror_num} == 2 ]] && bundle_link="https://cokemine.coding.net/p/hotarunet/d/ServerStatus-Hotaru/git/archive/master/?download=true" || bundle_link="https://github.com/CokeMine/ServerStatus-Hotaru/archive/master.zip"
-  [[ ${mirror_num} == 2 ]] && github_link="https://hub.fastgit.org" || github_link="https://github.com"
+  bundle_link="https://github.com/MJJSUN/ServerStatus-Hotaru/archive/master.zip"
+  github_link="https://github.com"
   wget -N --no-check-certificate "${bundle_link}" -O "master.zip"
-  [[ ! -e "master.zip" ]] && echo -e "${Error} ServerStatus 鏈嶅姟绔笅杞藉け璐?!" && exit 1
+  [[ ! -e "master.zip" ]] && echo -e "${Error} ServerStatus 服务端下载失败 !" && exit 1
   unzip master.zip
   rm -rf master.zip
   [[ -d "/tmp/cokemine-hotarunet-ServerStatus-Hotaru-master" ]] && mv "/tmp/cokemine-hotarunet-ServerStatus-Hotaru-master" "/tmp/ServerStatus-Hotaru-master"
-  [[ ! -d "/tmp/ServerStatus-Hotaru-master" ]] && echo -e "${Error} ServerStatus 鏈嶅姟绔В鍘嬪け璐?!" && exit 1
+  [[ ! -d "/tmp/ServerStatus-Hotaru-master" ]] && echo -e "${Error} ServerStatus 服务端解压失败 !" && exit 1
   cd "/tmp/ServerStatus-Hotaru-master/server" || exit 1
   make
-  [[ ! -e "sergate" ]] && echo -e "${Error} ServerStatus 鏈嶅姟绔紪璇戝け璐?!" && cd "${file_1}" && rm -rf "/tmp/ServerStatus-Hotaru-master" && exit 1
+  [[ ! -e "sergate" ]] && echo -e "${Error} ServerStatus 服务端编译失败 !" && cd "${file_1}" && rm -rf "/tmp/ServerStatus-Hotaru-master" && exit 1
   cd "${file_1}" || exit 1
   mkdir -p "${server_file}"
   if [[ -e "${server_file}/sergate" ]]; then
@@ -105,7 +106,7 @@ Download_Server_Status_server() {
   fi
   rm -rf "/tmp/ServerStatus-Hotaru-master"
   if [[ ! -e "${server_file}/sergate" ]]; then
-    echo -e "${Error} ServerStatus 鏈嶅姟绔Щ鍔ㄩ噸鍛藉悕澶辫触 !"
+    echo -e "${Error} ServerStatus 服务端移动重命名失败 !"
     [[ -e "${server_file}/sergate1" ]] && mv "${server_file}/sergate1" "${server_file}/sergate"
     exit 1
   else
@@ -115,13 +116,13 @@ Download_Server_Status_server() {
 Download_Server_Status_client() {
   cd "/tmp" || exit 1
   wget -N --no-check-certificate "${link_prefix}/clients/status-client.py"
-  [[ ! -e "status-client.py" ]] && echo -e "${Error} ServerStatus 瀹㈡埛绔笅杞藉け璐?!" && exit 1
+  [[ ! -e "status-client.py" ]] && echo -e "${Error} ServerStatus 客户端下载失败 !" && exit 1
   cd "${file_1}" || exit 1
   mkdir -p "${client_file}"
   [[ -e "${client_file}/status-client.py" ]] && mv "${client_file}/status-client.py" "${client_file}/status-client1.py"
   mv "/tmp/status-client.py" "${client_file}/status-client.py"
   if [[ ! -e "${client_file}/status-client.py" ]]; then
-    echo -e "${Error} ServerStatus 瀹㈡埛绔Щ鍔ㄥけ璐?!"
+    echo -e "${Error} ServerStatus 客户端移动失败 !"
     [[ -e "${client_file}/status-client1.py" ]] && mv "${client_file}/status-client1.py" "${client_file}/status-client.py"
     rm -rf "/tmp/status-client.py"
     exit 1
@@ -135,12 +136,18 @@ Download_Server_Status_Service() {
   [[ -z ${mode} ]] && mode="server"
   local service_note="服务端"
   [[ ${mode} == "client" ]] && service_note="客户端"
+  
+  # 统一使用 systemd service 管理，不区分发行版
   wget --no-check-certificate "${link_prefix}/service/status-${mode}.service" -O "/usr/lib/systemd/system/status-${mode}.service" ||
     {
       echo -e "${Error} ServerStatus ${service_note}服务管理脚本下载失败 !"
       exit 1
     }
+  
+  # 启用并启动服务
+  systemctl daemon-reload
   systemctl enable "status-${mode}.service"
+  
   echo -e "${Info} ServerStatus ${service_note}服务管理脚本下载完成 !"
 }
 Service_Server_Status_server() {
@@ -211,55 +218,55 @@ Set_server() {
   mode=$1
   [[ -z ${mode} ]] && mode="server"
   if [[ ${mode} == "server" ]]; then
-    echo -e "璇疯緭鍏?ServerStatus 鏈嶅姟绔腑缃戠珯瑕佽缃殑 鍩熷悕[server]
-榛樿涓烘湰鏈篒P涓哄煙鍚嶏紝渚嬪杈撳叆: toyoo.pw 锛屽鏋滆浣跨敤鏈満IP锛岃鐣欑┖鐩存帴鍥炶溅"
-    read -erp "(榛樿: 鏈満IP):" server_s
+    echo -e "请输入 ServerStatus 服务端中网站要设置的 域名[server]
+默认为本机IP为域名，例如输入: toyoo.pw ，如果要使用本机IP，请留空直接回车"
+    read -erp "(默认: 本机IP):" server_s
     [[ -z "$server_s" ]] && server_s=""
   else
-    echo -e "璇疯緭鍏?ServerStatus 鏈嶅姟绔殑 IP/鍩熷悕[server]锛岃娉ㄦ剰锛屽鏋滀綘鐨勫煙鍚嶄娇鐢ㄤ簡CDN锛岃鐩存帴濉啓IP"
-    read -erp "(榛樿: 127.0.0.1):" server_s
+    echo -e "请输入 ServerStatus 服务端的 IP/域名[server]，请注意，如果你的域名使用了CDN，请直接填写IP"
+    read -erp "(默认: 127.0.0.1):" server_s
     [[ -z "$server_s" ]] && server_s="127.0.0.1"
   fi
 
   echo && echo "	================================================"
-  echo -e "	IP/鍩熷悕[server]: ${Red_background_prefix} ${server_s} ${Font_color_suffix}"
+  echo -e "	IP/域名[server]: ${Red_background_prefix} ${server_s} ${Font_color_suffix}"
   echo "	================================================" && echo
 }
 Set_server_http_port() {
   while true; do
-    echo -e "璇疯緭鍏?ServerStatus 鏈嶅姟绔腑缃戠珯瑕佽缃殑 鍩熷悕/IP鐨勭鍙1-65535]锛堝鏋滄槸鍩熷悕鐨勮瘽锛屼竴鑸敤 80 绔彛锛?
-    read -erp "(榛樿: 8888):" server_http_port_s
+    echo -e "请输入 ServerStatus 服务端中网站要设置的 域名/IP的端口[1-65535]（如果是域名的话，一般用 80 端口）"
+    read -erp "(默认: 8888):" server_http_port_s
     [[ -z "$server_http_port_s" ]] && server_http_port_s="8888"
     if [[ "$server_http_port_s" =~ ^[0-9]*$ ]]; then
       if [[ ${server_http_port_s} -ge 1 ]] && [[ ${server_http_port_s} -le 65535 ]]; then
         echo && echo "	================================================"
-        echo -e "	绔彛: ${Red_background_prefix} ${server_http_port_s} ${Font_color_suffix}"
+        echo -e "	端口: ${Red_background_prefix} ${server_http_port_s} ${Font_color_suffix}"
         echo "	================================================" && echo
         break
       else
-        echo "杈撳叆閿欒, 璇疯緭鍏ユ纭殑绔彛銆?
+        echo "输入错误, 请输入正确的端口。"
       fi
     else
-      echo "杈撳叆閿欒, 璇疯緭鍏ユ纭殑绔彛銆?
+      echo "输入错误, 请输入正确的端口。"
     fi
   done
 }
 Set_server_port() {
   while true; do
-    echo -e "璇疯緭鍏?ServerStatus 鏈嶅姟绔洃鍚殑绔彛[1-65535]锛堢敤浜庢湇鍔＄鎺ユ敹瀹㈡埛绔秷鎭殑绔彛锛屽鎴风瑕佸～鍐欒繖涓鍙ｏ級"
-    read -erp "(榛樿: 35601):" server_port_s
+    echo -e "请输入 ServerStatus 服务端监听的端口[1-65535]（用于服务端接收客户端消息的端口，客户端要填写这个端口）"
+    read -erp "(默认: 35601):" server_port_s
     [[ -z "$server_port_s" ]] && server_port_s="35601"
     if [[ "$server_port_s" =~ ^[0-9]*$ ]]; then
       if [[ ${server_port_s} -ge 1 ]] && [[ ${server_port_s} -le 65535 ]]; then
         echo && echo "	================================================"
-        echo -e "	绔彛: ${Red_background_prefix} ${server_port_s} ${Font_color_suffix}"
+        echo -e "	端口: ${Red_background_prefix} ${server_port_s} ${Font_color_suffix}"
         echo "	================================================" && echo
         break
       else
-        echo "杈撳叆閿欒, 璇疯緭鍏ユ纭殑绔彛銆?
+        echo "输入错误, 请输入正确的端口。"
       fi
     else
-      echo "杈撳叆閿欒, 璇疯緭鍏ユ纭殑绔彛銆?
+      echo "输入错误, 请输入正确的端口。"
     fi
   done
 }
@@ -267,68 +274,68 @@ Set_username() {
   mode=$1
   [[ -z ${mode} ]] && mode="server"
   if [[ ${mode} == "server" ]]; then
-    echo -e "璇疯緭鍏?ServerStatus 鏈嶅姟绔璁剧疆鐨勭敤鎴峰悕[username]锛堝瓧姣?鏁板瓧锛屼笉鍙笌鍏朵粬璐﹀彿閲嶅锛?
+    echo -e "请输入 ServerStatus 服务端要设置的用户名[username]（字母/数字，不可与其他账号重复）"
   else
-    echo -e "璇疯緭鍏?ServerStatus 鏈嶅姟绔腑瀵瑰簲閰嶇疆鐨勭敤鎴峰悕[username]锛堝瓧姣?鏁板瓧锛屼笉鍙笌鍏朵粬璐﹀彿閲嶅锛?
+    echo -e "请输入 ServerStatus 服务端中对应配置的用户名[username]（字母/数字，不可与其他账号重复）"
   fi
-  read -erp "(榛樿: 鍙栨秷):" username_s
-  [[ -z "$username_s" ]] && echo "宸插彇娑?.." && exit 0
+  read -erp "(默认: 取消):" username_s
+  [[ -z "$username_s" ]] && echo "已取消..." && exit 0
   echo && echo "	================================================"
-  echo -e "	璐﹀彿[username]: ${Red_background_prefix} ${username_s} ${Font_color_suffix}"
+  echo -e "	账号[username]: ${Red_background_prefix} ${username_s} ${Font_color_suffix}"
   echo "	================================================" && echo
 }
 Set_password() {
   mode=$1
   [[ -z ${mode} ]] && mode="server"
   if [[ ${mode} == "server" ]]; then
-    echo -e "璇疯緭鍏?ServerStatus 鏈嶅姟绔璁剧疆鐨勫瘑鐮乕password]锛堝瓧姣?鏁板瓧锛屽彲閲嶅锛?
+    echo -e "请输入 ServerStatus 服务端要设置的密码[password]（字母/数字，可重复）"
   else
-    echo -e "璇疯緭鍏?ServerStatus 鏈嶅姟绔腑瀵瑰簲閰嶇疆鐨勫瘑鐮乕password]锛堝瓧姣?鏁板瓧锛?
+    echo -e "请输入 ServerStatus 服务端中对应配置的密码[password]（字母/数字）"
   fi
-  read -erp "(榛樿: doub.io):" password_s
+  read -erp "(默认: doub.io):" password_s
   [[ -z "$password_s" ]] && password_s="doub.io"
   echo && echo "	================================================"
-  echo -e "	瀵嗙爜[password]: ${Red_background_prefix} ${password_s} ${Font_color_suffix}"
+  echo -e "	密码[password]: ${Red_background_prefix} ${password_s} ${Font_color_suffix}"
   echo "	================================================" && echo
 }
 Set_vnstat() {
-  echo -e "瀵逛簬娴侀噺璁＄畻鏄惁浣跨敤Vnstat姣忔湀鑷姩娓呴浂锛?[y/N]"
-  read -erp "(榛樿: N):" isVnstat
+  echo -e "对于流量计算是否使用Vnstat每月自动清零？ [y/N]"
+  read -erp "(默认: N):" isVnstat
   [[ -z "$isVnstat" ]] && isVnstat="n"
 }
 Set_name() {
-  echo -e "璇疯緭鍏?ServerStatus 鏈嶅姟绔璁剧疆鐨勮妭鐐瑰悕绉癧name]锛堟敮鎸佷腑鏂囷紝鍓嶆彁鏄綘鐨勭郴缁熷拰SSH宸ュ叿鏀寔涓枃杈撳叆锛屼粎浠呮槸涓悕瀛楋級"
-  read -erp "(榛樿: Server 01):" name_s
+  echo -e "请输入 ServerStatus 服务端要设置的节点名称[name]（支持中文，前提是你的系统和SSH工具支持中文输入，仅仅是个名字）"
+  read -erp "(默认: Server 01):" name_s
   [[ -z "$name_s" ]] && name_s="Server 01"
   echo && echo "	================================================"
-  echo -e "	鑺傜偣鍚嶇О[name]: ${Red_background_prefix} ${name_s} ${Font_color_suffix}"
+  echo -e "	节点名称[name]: ${Red_background_prefix} ${name_s} ${Font_color_suffix}"
   echo "	================================================" && echo
 }
 Set_type() {
-  echo -e "璇疯緭鍏?ServerStatus 鏈嶅姟绔璁剧疆鐨勮妭鐐硅櫄鎷熷寲绫诲瀷[type]锛堜緥濡?OpenVZ / KVM锛?
-  read -erp "(榛樿: KVM):" type_s
+  echo -e "请输入 ServerStatus 服务端要设置的节点虚拟化类型[type]（例如 OpenVZ / KVM）"
+  read -erp "(默认: KVM):" type_s
   [[ -z "$type_s" ]] && type_s="KVM"
   echo && echo "	================================================"
-  echo -e "	铏氭嫙鍖栫被鍨媅type]: ${Red_background_prefix} ${type_s} ${Font_color_suffix}"
+  echo -e "	虚拟化类型[type]: ${Red_background_prefix} ${type_s} ${Font_color_suffix}"
   echo "	================================================" && echo
 }
 Set_location() {
-  echo -e "璇疯緭鍏?ServerStatus 鏈嶅姟绔璁剧疆鐨勮妭鐐逛綅缃甗location]锛堟敮鎸佷腑鏂囷紝鍓嶆彁鏄綘鐨勭郴缁熷拰SSH宸ュ叿鏀寔涓枃杈撳叆锛?
-  read -erp "(榛樿: Hong Kong):" location_s
+  echo -e "请输入 ServerStatus 服务端要设置的节点位置[location]（支持中文，前提是你的系统和SSH工具支持中文输入）"
+  read -erp "(默认: Hong Kong):" location_s
   [[ -z "$location_s" ]] && location_s="Hong Kong"
   echo && echo "	================================================"
-  echo -e "	鑺傜偣浣嶇疆[location]: ${Red_background_prefix} ${location_s} ${Font_color_suffix}"
+  echo -e "	节点位置[location]: ${Red_background_prefix} ${location_s} ${Font_color_suffix}"
   echo "	================================================" && echo
 }
 Set_region() {
-  echo -e "璇疯緭鍏?ServerStatus 鏈嶅姟绔璁剧疆鐨勮妭鐐瑰湴鍖篬region]锛堢敤浜庡浗瀹?鍦板尯鐨勬棗甯滃浘鏍囨樉绀猴級"
-  read -erp "(榛樿: HK):" region_s
+  echo -e "请输入 ServerStatus 服务端要设置的节点地区[region]（用于国家/地区的旗帜图标显示）"
+  read -erp "(默认: HK):" region_s
   [[ -z "$region_s" ]] && region_s="HK"
   while ! check_region; do
-    read -erp "浣犺緭鍏ョ殑鑺傜偣鍦板尯涓嶅悎娉曪紝璇烽噸鏂拌緭鍏ワ細" region_s
+    read -erp "你输入的节点地区不合法，请重新输入：" region_s
   done
   echo && echo "	================================================"
-  echo -e "	鑺傜偣鍦板尯[region]: ${Red_background_prefix} ${region_s} ${Font_color_suffix}"
+  echo -e "	节点地区[region]: ${Red_background_prefix} ${region_s} ${Font_color_suffix}"
   echo "	================================================" && echo
 }
 Set_config_server() {
@@ -348,19 +355,24 @@ Set_config_client() {
 }
 Set_ServerStatus_server() {
   check_installed_server_status
-  echo && echo -e " 浣犺鍋氫粈涔堬紵
+  echo && echo -e " 你要做什么？
 
- ${Green_font_prefix} 1.${Font_color_suffix} 娣诲姞 鑺傜偣閰嶇疆
- ${Green_font_prefix} 2.${Font_color_suffix} 鍒犻櫎 鑺傜偣閰嶇疆
-鈥斺€斺€斺€斺€斺€斺€斺€? ${Green_font_prefix} 3.${Font_color_suffix} 淇敼 鑺傜偣閰嶇疆 - 鑺傜偣鐢ㄦ埛鍚? ${Green_font_prefix} 4.${Font_color_suffix} 淇敼 鑺傜偣閰嶇疆 - 鑺傜偣瀵嗙爜
- ${Green_font_prefix} 5.${Font_color_suffix} 淇敼 鑺傜偣閰嶇疆 - 鑺傜偣鍚嶇О
- ${Green_font_prefix} 6.${Font_color_suffix} 淇敼 鑺傜偣閰嶇疆 - 鑺傜偣铏氭嫙鍖? ${Green_font_prefix} 7.${Font_color_suffix} 淇敼 鑺傜偣閰嶇疆 - 鑺傜偣浣嶇疆
- ${Green_font_prefix} 8.${Font_color_suffix} 淇敼 鑺傜偣閰嶇疆 - 鑺傜偣鍖哄煙
- ${Green_font_prefix} 9.${Font_color_suffix} 淇敼 鑺傜偣閰嶇疆 - 鍏ㄩ儴鍙傛暟
-鈥斺€斺€斺€斺€斺€斺€斺€? ${Green_font_prefix} 10.${Font_color_suffix} 鍚敤/绂佺敤 鑺傜偣閰嶇疆
-鈥斺€斺€斺€斺€斺€斺€斺€? ${Green_font_prefix}11.${Font_color_suffix} 淇敼 鏈嶅姟绔洃鍚鍙? && echo
-  read -erp "(榛樿: 鍙栨秷):" server_num
-  [[ -z "${server_num}" ]] && echo "宸插彇娑?.." && exit 1
+ ${Green_font_prefix} 1.${Font_color_suffix} 添加 节点配置
+ ${Green_font_prefix} 2.${Font_color_suffix} 删除 节点配置
+————————
+ ${Green_font_prefix} 3.${Font_color_suffix} 修改 节点配置 - 节点用户名
+ ${Green_font_prefix} 4.${Font_color_suffix} 修改 节点配置 - 节点密码
+ ${Green_font_prefix} 5.${Font_color_suffix} 修改 节点配置 - 节点名称
+ ${Green_font_prefix} 6.${Font_color_suffix} 修改 节点配置 - 节点虚拟化
+ ${Green_font_prefix} 7.${Font_color_suffix} 修改 节点配置 - 节点位置
+ ${Green_font_prefix} 8.${Font_color_suffix} 修改 节点配置 - 节点区域
+ ${Green_font_prefix} 9.${Font_color_suffix} 修改 节点配置 - 全部参数
+————————
+ ${Green_font_prefix} 10.${Font_color_suffix} 启用/禁用 节点配置
+————————
+ ${Green_font_prefix}11.${Font_color_suffix} 修改 服务端监听端口" && echo
+  read -erp "(默认: 取消):" server_num
+  [[ -z "${server_num}" ]] && echo "已取消..." && exit 1
   if [[ ${server_num} == "1" ]]; then
     Add_ServerStatus_server
   elif [[ ${server_num} == "2" ]]; then
@@ -386,14 +398,14 @@ Set_ServerStatus_server() {
     Set_server_port
     Write_server_config_conf
   else
-    echo -e "${Error} 璇疯緭鍏ユ纭殑鏁板瓧[1-11]" && exit 1
+    echo -e "${Error} 请输入正确的数字[1-11]" && exit 1
   fi
   Restart_ServerStatus_server
 }
 List_ServerStatus_server() {
   conf_text=$(${jq_file} '.servers' ${server_conf} | ${jq_file} ".[]|.username" | sed 's/\"//g')
   conf_text_total=$(echo -e "${conf_text}" | wc -l)
-  [[ ${conf_text_total} == "0" ]] && echo -e "${Error} 娌℃湁鍙戠幇 涓€涓妭鐐归厤缃紝璇锋鏌?!" && exit 1
+  [[ ${conf_text_total} == "0" ]] && echo -e "${Error} 没有发现 一个节点配置，请检查 !" && exit 1
   conf_text_total_a=$((conf_text_total - 1))
   conf_list_all=""
   for ((integer = 0; integer <= conf_text_total_a; integer++)); do
@@ -406,19 +418,19 @@ List_ServerStatus_server() {
     now_text_region=$(echo -e "${now_text}" | grep "region" | awk -F ": " '{print $2}')
     now_text_disabled=$(echo -e "${now_text}" | grep "disabled" | awk -F ": " '{print $2}')
     if [[ ${now_text_disabled} == "false" ]]; then
-      now_text_disabled_status="${Green_font_prefix}鍚敤${Font_color_suffix}"
+      now_text_disabled_status="${Green_font_prefix}启用${Font_color_suffix}"
     else
-      now_text_disabled_status="${Red_font_prefix}绂佺敤${Font_color_suffix}"
+      now_text_disabled_status="${Red_font_prefix}禁用${Font_color_suffix}"
     fi
-    conf_list_all=${conf_list_all}"鐢ㄦ埛鍚? ${Green_font_prefix}${now_text_username}${Font_color_suffix} 瀵嗙爜: ${Green_font_prefix}${now_text_password}${Font_color_suffix} 鑺傜偣鍚? ${Green_font_prefix}${now_text_name}${Font_color_suffix} 绫诲瀷: ${Green_font_prefix}${now_text_type}${Font_color_suffix} 浣嶇疆: ${Green_font_prefix}${now_text_location}${Font_color_suffix} 鍖哄煙: ${Green_font_prefix}${now_text_region}${Font_color_suffix} 鐘舵€? ${Green_font_prefix}${now_text_disabled_status}${Font_color_suffix}\n"
+    conf_list_all=${conf_list_all}"用户名: ${Green_font_prefix}${now_text_username}${Font_color_suffix} 密码: ${Green_font_prefix}${now_text_password}${Font_color_suffix} 节点名: ${Green_font_prefix}${now_text_name}${Font_color_suffix} 类型: ${Green_font_prefix}${now_text_type}${Font_color_suffix} 位置: ${Green_font_prefix}${now_text_location}${Font_color_suffix} 区域: ${Green_font_prefix}${now_text_region}${Font_color_suffix} 状态: ${Green_font_prefix}${now_text_disabled_status}${Font_color_suffix}\n"
   done
-  echo && echo -e "鑺傜偣鎬绘暟 ${Green_font_prefix}${conf_text_total}${Font_color_suffix}"
+  echo && echo -e "节点总数 ${Green_font_prefix}${conf_text_total}${Font_color_suffix}"
   echo -e "${conf_list_all}"
 }
 Add_ServerStatus_server() {
   Set_config_server
   Set_username_ch=$(grep '"username": "'"${username_s}"'"' ${server_conf})
-  [[ -n "${Set_username_ch}" ]] && echo -e "${Error} 鐢ㄦ埛鍚嶅凡琚娇鐢?!" && exit 1
+  [[ -n "${Set_username_ch}" ]] && echo -e "${Error} 用户名已被使用 !" && exit 1
   sed -i '3i\  },' ${server_conf}
   sed -i '3i\   "region": "'"${region_s}"'"' ${server_conf}
   sed -i '3i\   "disabled": false ,' ${server_conf}
@@ -429,14 +441,14 @@ Add_ServerStatus_server() {
   sed -i '3i\   "password": "'"${password_s}"'",' ${server_conf}
   sed -i '3i\   "username": "'"${username_s}"'",' ${server_conf}
   sed -i '3i\  {' ${server_conf}
-  echo -e "${Info} 娣诲姞鑺傜偣鎴愬姛 ${Green_font_prefix}[ 鑺傜偣鍚嶇О: ${name_s}, 鑺傜偣鐢ㄦ埛鍚? ${username_s}, 鑺傜偣瀵嗙爜: ${password_s} ]${Font_color_suffix} !"
+  echo -e "${Info} 添加节点成功 ${Green_font_prefix}[ 节点名称: ${name_s}, 节点用户名: ${username_s}, 节点密码: ${password_s} ]${Font_color_suffix} !"
 }
 Del_ServerStatus_server() {
   List_ServerStatus_server
-  [[ "${conf_text_total}" == "1" ]] && echo -e "${Error} 鑺傜偣閰嶇疆浠呭墿 1涓紝涓嶈兘鍒犻櫎 !" && exit 1
-  echo -e "璇疯緭鍏ヨ鍒犻櫎鐨勮妭鐐圭敤鎴峰悕"
-  read -erp "(榛樿: 鍙栨秷):" del_server_username
-  [[ -z "${del_server_username}" ]] && echo -e "宸插彇娑?.." && exit 1
+  [[ "${conf_text_total}" == "1" ]] && echo -e "${Error} 节点配置仅剩 1个，不能删除 !" && exit 1
+  echo -e "请输入要删除的节点用户名"
+  read -erp "(默认: 取消):" del_server_username
+  [[ -z "${del_server_username}" ]] && echo -e "已取消..." && exit 1
   del_username=$(cat -n ${server_conf} | grep '"username": "'"${del_server_username}"'"' | awk '{print $1}')
   if [[ -n ${del_username} ]]; then
     del_username_min=$((del_username - 1))
@@ -448,112 +460,112 @@ Del_ServerStatus_server() {
       sed -i "${del_list_num}s/,$//g" ${server_conf}
     fi
     sed -i "${del_username_min},${del_username_max}d" ${server_conf}
-    echo -e "${Info} 鑺傜偣鍒犻櫎鎴愬姛 ${Green_font_prefix}[ 鑺傜偣鐢ㄦ埛鍚? ${del_server_username} ]${Font_color_suffix} "
+    echo -e "${Info} 节点删除成功 ${Green_font_prefix}[ 节点用户名: ${del_server_username} ]${Font_color_suffix} "
   else
-    echo -e "${Error} 璇疯緭鍏ユ纭殑鑺傜偣鐢ㄦ埛鍚?!" && exit 1
+    echo -e "${Error} 请输入正确的节点用户名 !" && exit 1
   fi
 }
 Modify_ServerStatus_server_username() {
   List_ServerStatus_server
-  echo -e "璇疯緭鍏ヨ淇敼鐨勮妭鐐圭敤鎴峰悕"
-  read -erp "(榛樿: 鍙栨秷):" manually_username
-  [[ -z "${manually_username}" ]] && echo -e "宸插彇娑?.." && exit 1
+  echo -e "请输入要修改的节点用户名"
+  read -erp "(默认: 取消):" manually_username
+  [[ -z "${manually_username}" ]] && echo -e "已取消..." && exit 1
   Set_username_num=$(cat -n ${server_conf} | grep '"username": "'"${manually_username}"'"' | awk '{print $1}')
   if [[ -n ${Set_username_num} ]]; then
     Set_username
     Set_username_ch=$(grep '"username": "'"${username_s}"'"' ${server_conf})
-    [[ -n "${Set_username_ch}" ]] && echo -e "${Error} 鐢ㄦ埛鍚嶅凡琚娇鐢?!" && exit 1
+    [[ -n "${Set_username_ch}" ]] && echo -e "${Error} 用户名已被使用 !" && exit 1
     sed -i "${Set_username_num}"'s/"username": "'"${manually_username}"'"/"username": "'"${username_s}"'"/g' ${server_conf}
-    echo -e "${Info} 淇敼鎴愬姛 [ 鍘熻妭鐐圭敤鎴峰悕: ${manually_username}, 鏂拌妭鐐圭敤鎴峰悕: ${username_s} ]"
+    echo -e "${Info} 修改成功 [ 原节点用户名: ${manually_username}, 新节点用户名: ${username_s} ]"
   else
-    echo -e "${Error} 璇疯緭鍏ユ纭殑鑺傜偣鐢ㄦ埛鍚?!" && exit 1
+    echo -e "${Error} 请输入正确的节点用户名 !" && exit 1
   fi
 }
 Modify_ServerStatus_server_password() {
   List_ServerStatus_server
-  echo -e "璇疯緭鍏ヨ淇敼鐨勮妭鐐圭敤鎴峰悕"
-  read -erp "(榛樿: 鍙栨秷):" manually_username
-  [[ -z "${manually_username}" ]] && echo -e "宸插彇娑?.." && exit 1
+  echo -e "请输入要修改的节点用户名"
+  read -erp "(默认: 取消):" manually_username
+  [[ -z "${manually_username}" ]] && echo -e "已取消..." && exit 1
   Set_username_num=$(cat -n ${server_conf} | grep '"username": "'"${manually_username}"'"' | awk '{print $1}')
   if [[ -n ${Set_username_num} ]]; then
     Set_password
     Set_password_num_a=$((Set_username_num + 1))
     Set_password_num_text=$(sed -n "${Set_password_num_a}p" ${server_conf} | sed 's/\"//g;s/,$//g' | awk -F ": " '{print $2}')
     sed -i "${Set_password_num_a}"'s/"password": "'"${Set_password_num_text}"'"/"password": "'"${password_s}"'"/g' ${server_conf}
-    echo -e "${Info} 淇敼鎴愬姛 [ 鍘熻妭鐐瑰瘑鐮? ${Set_password_num_text}, 鏂拌妭鐐瑰瘑鐮? ${password_s} ]"
+    echo -e "${Info} 修改成功 [ 原节点密码: ${Set_password_num_text}, 新节点密码: ${password_s} ]"
   else
-    echo -e "${Error} 璇疯緭鍏ユ纭殑鑺傜偣鐢ㄦ埛鍚?!" && exit 1
+    echo -e "${Error} 请输入正确的节点用户名 !" && exit 1
   fi
 }
 Modify_ServerStatus_server_name() {
   List_ServerStatus_server
-  echo -e "璇疯緭鍏ヨ淇敼鐨勮妭鐐圭敤鎴峰悕"
-  read -erp "(榛樿: 鍙栨秷):" manually_username
-  [[ -z "${manually_username}" ]] && echo -e "宸插彇娑?.." && exit 1
+  echo -e "请输入要修改的节点用户名"
+  read -erp "(默认: 取消):" manually_username
+  [[ -z "${manually_username}" ]] && echo -e "已取消..." && exit 1
   Set_username_num=$(cat -n ${server_conf} | grep '"username": "'"${manually_username}"'"' | awk '{print $1}')
   if [[ -n ${Set_username_num} ]]; then
     Set_name
     Set_name_num_a=$((Set_username_num + 2))
     Set_name_num_a_text=$(sed -n "${Set_name_num_a}p" ${server_conf} | sed 's/\"//g;s/,$//g' | awk -F ": " '{print $2}')
     sed -i "${Set_name_num_a}"'s/"name": "'"${Set_name_num_a_text}"'"/"name": "'"${name_s}"'"/g' ${server_conf}
-    echo -e "${Info} 淇敼鎴愬姛 [ 鍘熻妭鐐瑰悕绉? ${Set_name_num_a_text}, 鏂拌妭鐐瑰悕绉? ${name_s} ]"
+    echo -e "${Info} 修改成功 [ 原节点名称: ${Set_name_num_a_text}, 新节点名称: ${name_s} ]"
   else
-    echo -e "${Error} 璇疯緭鍏ユ纭殑鑺傜偣鐢ㄦ埛鍚?!" && exit 1
+    echo -e "${Error} 请输入正确的节点用户名 !" && exit 1
   fi
 }
 Modify_ServerStatus_server_type() {
   List_ServerStatus_server
-  echo -e "璇疯緭鍏ヨ淇敼鐨勮妭鐐圭敤鎴峰悕"
-  read -erp "(榛樿: 鍙栨秷):" manually_username
-  [[ -z "${manually_username}" ]] && echo -e "宸插彇娑?.." && exit 1
+  echo -e "请输入要修改的节点用户名"
+  read -erp "(默认: 取消):" manually_username
+  [[ -z "${manually_username}" ]] && echo -e "已取消..." && exit 1
   Set_username_num=$(cat -n ${server_conf} | grep '"username": "'"${manually_username}"'"' | awk '{print $1}')
   if [[ -n ${Set_username_num} ]]; then
     Set_type
     Set_type_num_a=$((Set_username_num + 3))
     Set_type_num_a_text=$(sed -n "${Set_type_num_a}p" ${server_conf} | sed 's/\"//g;s/,$//g' | awk -F ": " '{print $2}')
     sed -i "${Set_type_num_a}"'s/"type": "'"${Set_type_num_a_text}"'"/"type": "'"${type_s}"'"/g' ${server_conf}
-    echo -e "${Info} 淇敼鎴愬姛 [ 鍘熻妭鐐硅櫄鎷熷寲: ${Set_type_num_a_text}, 鏂拌妭鐐硅櫄鎷熷寲: ${type_s} ]"
+    echo -e "${Info} 修改成功 [ 原节点虚拟化: ${Set_type_num_a_text}, 新节点虚拟化: ${type_s} ]"
   else
-    echo -e "${Error} 璇疯緭鍏ユ纭殑鑺傜偣鐢ㄦ埛鍚?!" && exit 1
+    echo -e "${Error} 请输入正确的节点用户名 !" && exit 1
   fi
 }
 Modify_ServerStatus_server_location() {
   List_ServerStatus_server
-  echo -e "璇疯緭鍏ヨ淇敼鐨勮妭鐐圭敤鎴峰悕"
-  read -erp "(榛樿: 鍙栨秷):" manually_username
-  [[ -z "${manually_username}" ]] && echo -e "宸插彇娑?.." && exit 1
+  echo -e "请输入要修改的节点用户名"
+  read -erp "(默认: 取消):" manually_username
+  [[ -z "${manually_username}" ]] && echo -e "已取消..." && exit 1
   Set_username_num=$(cat -n ${server_conf} | grep '"username": "'"${manually_username}"'"' | awk '{print $1}')
   if [[ -n ${Set_username_num} ]]; then
     Set_location
     Set_location_num_a=$((Set_username_num + 5))
     Set_location_num_a_text=$(sed -n "${Set_location_num_a}p" ${server_conf} | sed 's/\"//g;s/,$//g' | awk -F ": " '{print $2}')
     sed -i "${Set_location_num_a}"'s/"location": "'"${Set_location_num_a_text}"'"/"location": "'"${location_s}"'"/g' ${server_conf}
-    echo -e "${Info} 淇敼鎴愬姛 [ 鍘熻妭鐐逛綅缃? ${Set_location_num_a_text}, 鏂拌妭鐐逛綅缃? ${location_s} ]"
+    echo -e "${Info} 修改成功 [ 原节点位置: ${Set_location_num_a_text}, 新节点位置: ${location_s} ]"
   else
-    echo -e "${Error} 璇疯緭鍏ユ纭殑鑺傜偣鐢ㄦ埛鍚?!" && exit 1
+    echo -e "${Error} 请输入正确的节点用户名 !" && exit 1
   fi
 }
 Modify_ServerStatus_server_region() {
   List_ServerStatus_server
-  echo -e "璇疯緭鍏ヨ淇敼鐨勮妭鐐圭敤鎴峰悕"
-  read -erp "(榛樿: 鍙栨秷):" manually_username
-  [[ -z "${manually_username}" ]] && echo -e "宸插彇娑?.." && exit 1
+  echo -e "请输入要修改的节点用户名"
+  read -erp "(默认: 取消):" manually_username
+  [[ -z "${manually_username}" ]] && echo -e "已取消..." && exit 1
   Set_username_num=$(cat -n ${server_conf} | grep '"username": "'"${manually_username}"'"' | awk '{print $1}')
   if [[ -n ${Set_username_num} ]]; then
     Set_region
     Set_region_num_a=$((Set_username_num + 7))
     Set_region_num_a_text=$(sed -n "${Set_region_num_a}p" ${server_conf} | sed 's/\"//g;s/,$//g' | awk -F ": " '{print $2}')
     sed -i "${Set_region_num_a}"'s/"region": "'"${Set_region_num_a_text}"'"/"region": "'"${region_s}"'"/g' ${server_conf}
-    echo -e "${Info} 淇敼鎴愬姛 [ 鍘熻妭鐐瑰湴鍖? ${Set_region_num_a_text}, 鏂拌妭鐐瑰湴鍖? ${region_s} ]"
+    echo -e "${Info} 修改成功 [ 原节点地区: ${Set_region_num_a_text}, 新节点地区: ${region_s} ]"
   else
-    echo -e "${Error} 璇疯緭鍏ユ纭殑鑺傜偣鐢ㄦ埛鍚?!" && exit 1
+    echo -e "${Error} 请输入正确的节点用户名 !" && exit 1
   fi
 }
 Modify_ServerStatus_server_all() {
   List_ServerStatus_server
-  echo -e "璇疯緭鍏ヨ淇敼鐨勮妭鐐圭敤鎴峰悕"
-  read -erp "(榛樿: 鍙栨秷):" manually_username
-  [[ -z "${manually_username}" ]] && echo -e "宸插彇娑?.." && exit 1
+  echo -e "请输入要修改的节点用户名"
+  read -erp "(默认: 取消):" manually_username
+  [[ -z "${manually_username}" ]] && echo -e "已取消..." && exit 1
   Set_username_num=$(cat -n ${server_conf} | grep '"username": "'"${manually_username}"'"' | awk '{print $1}')
   if [[ -n ${Set_username_num} ]]; then
     Set_username
@@ -578,16 +590,16 @@ Modify_ServerStatus_server_all() {
     Set_region_num_a=$((Set_username_num + 7))
     Set_region_num_a_text=$(sed -n "${Set_region_num_a}p" ${server_conf} | sed 's/\"//g;s/,$//g' | awk -F ": " '{print $2}')
     sed -i "${Set_region_num_a}"'s/"region": "'"${Set_region_num_a_text}"'"/"region": "'"${region_s}"'"/g' ${server_conf}
-    echo -e "${Info} 淇敼鎴愬姛銆?
+    echo -e "${Info} 修改成功。"
   else
-    echo -e "${Error} 璇疯緭鍏ユ纭殑鑺傜偣鐢ㄦ埛鍚?!" && exit 1
+    echo -e "${Error} 请输入正确的节点用户名 !" && exit 1
   fi
 }
 Modify_ServerStatus_server_disabled() {
   List_ServerStatus_server
-  echo -e "璇疯緭鍏ヨ淇敼鐨勮妭鐐圭敤鎴峰悕"
-  read -erp "(榛樿: 鍙栨秷):" manually_username
-  [[ -z "${manually_username}" ]] && echo -e "宸插彇娑?.." && exit 1
+  echo -e "请输入要修改的节点用户名"
+  read -erp "(默认: 取消):" manually_username
+  [[ -z "${manually_username}" ]] && echo -e "已取消..." && exit 1
   Set_username_num=$(cat -n ${server_conf} | grep '"username": "'"${manually_username}"'"' | awk '{print $1}')
   if [[ -n ${Set_username_num} ]]; then
     Set_disabled_num_a=$((Set_username_num + 6))
@@ -598,9 +610,9 @@ Modify_ServerStatus_server_disabled() {
       disabled_s="false"
     fi
     sed -i "${Set_disabled_num_a}"'s/"disabled": '"${Set_disabled_num_a_text}"'/"disabled": '"${disabled_s}"'/g' ${server_conf}
-    echo -e "${Info} 淇敼鎴愬姛 [ 鍘熺鐢ㄧ姸鎬? ${Set_disabled_num_a_text}, 鏂扮鐢ㄧ姸鎬? ${disabled_s} ]"
+    echo -e "${Info} 修改成功 [ 原禁用状态: ${Set_disabled_num_a_text}, 新禁用状态: ${disabled_s} ]"
   else
-    echo -e "${Error} 璇疯緭鍏ユ纭殑鑺傜偣鐢ㄦ埛鍚?!" && exit 1
+    echo -e "${Error} 请输入正确的节点用户名 !" && exit 1
   fi
 }
 Set_ServerStatus_client() {
@@ -630,7 +642,7 @@ Install_vnStat() {
   cd vnstat-*/ || return 1
   ./configure --prefix=/usr --sysconfdir=/etc && make && make install
   if ! vnstat -v >/dev/null 2>&1; then
-    echo "缂栬瘧瀹夎vnStat澶辫触锛岃鎵嬪姩瀹夎vnStat"
+    echo "编译安装vnStat失败，请手动安装vnStat"
     exit 1
   fi
   vnstatd -d
@@ -661,16 +673,16 @@ Modify_config_client_traffic() {
     vnstat -v >/dev/null 2>&1 || Install_vnStat
     netName=$(awk '{i++; if( i>2 && ($2 != 0 && $10 != 0) ){print $1}}' /proc/net/dev | sed 's/^lo:$//g' | sed 's/^tun:$//g' | sed '/^$/d' | sed 's/^[\t]*//g' | sed 's/[:]*$//g')
     if [ -z "$netName" ]; then
-      echo -e "鑾峰彇缃戝崱鍚嶇О澶辫触锛岃鍦℅ithub鍙嶉"
+      echo -e "获取网卡名称失败，请在Github反馈"
       exit 1
     fi
     if [[ $netName =~ [[:space:]] ]]; then
-      read -erp "妫€娴嬪埌澶氫釜缃戝崱: ${netName}锛岃鎵嬪姩杈撳叆缃戝崱鍚嶇О" netName
+      read -erp "检测到多个网卡: ${netName}，请手动输入网卡名称" netName
     fi
-    read -erp "璇疯緭鍏ユ瘡鏈堟祦閲忓綊闆剁殑鏃ユ湡(1~28)锛岄粯璁や负1(鍗虫瘡鏈?鏃?: " time_N
+    read -erp "请输入每月流量归零的日期(1~28)，默认为1(即每月1日): " time_N
     [[ -z "$time_N" ]] && time_N="1"
     while ! [[ $time_N =~ ^[0-9]*$ ]] || ((time_N < 1 || time_N > 28)); do
-      read -erp "浣犺緭鍏ョ殑鏃ユ湡涓嶅悎娉曪紝璇烽噸鏂拌緭鍏? " time_N
+      read -erp "你输入的日期不合法，请重新输入: " time_N
     done
     sed -i "s/$(grep -w "MonthRotate" /etc/vnstat.conf)/MonthRotate $time_N/" /etc/vnstat.conf
     sed -i "s/$(grep -w "Interface" /etc/vnstat.conf)/Interface \"$netName\"/" /etc/vnstat.conf
@@ -714,21 +726,21 @@ Install_jq() {
       [[ ${release} == "debian" ]] && apt -y install jq
       jq_file="/usr/bin/jq"
     fi
-    [[ ! -e ${jq_file} ]] && echo -e "${Error} JQ瑙ｆ瀽鍣?涓嬭浇澶辫触锛岃妫€鏌?!" && exit 1
+    [[ ! -e ${jq_file} ]] && echo -e "${Error} JQ解析器 下载失败，请检查 !" && exit 1
     chmod +x ${jq_file}
-    echo -e "${Info} JQ瑙ｆ瀽鍣?瀹夎瀹屾垚锛岀户缁?.."
+    echo -e "${Info} JQ解析器 安装完成，继续..."
   else
-    echo -e "${Info} JQ瑙ｆ瀽鍣?宸插畨瑁咃紝缁х画..."
+    echo -e "${Info} JQ解析器 已安装，继续..."
   fi
   if [[ ! -e ${region_json} ]]; then
     wget --no-check-certificate "${raw_link}/michaelwittig/node-i18n-iso-countries/master/langs/zh.json" -O ${region_json}
-    [[ ! -e ${region_json} ]] && echo -e "${Error} ISO 3166-1 json鏂囦欢涓嬭浇澶辫触锛岃妫€鏌ワ紒" && exit 1
+    [[ ! -e ${region_json} ]] && echo -e "${Error} ISO 3166-1 json文件下载失败，请检查！" && exit 1
   fi
 }
 Install_caddy() {
   echo
-  echo -e "${Info} 鏄惁鐢辫剼鏈嚜鍔ㄩ厤缃瓾TTP鏈嶅姟(鏈嶅姟绔殑鍦ㄧ嚎鐩戞帶缃戠珯)锛屽鏋滈€夋嫨 N锛屽垯璇峰湪鍏朵粬HTTP鏈嶅姟涓厤缃綉绔欐牴鐩綍涓猴細${Green_font_prefix}${web_file}${Font_color_suffix} [Y/n]"
-  read -erp "(榛樿: Y 鑷姩閮ㄧ讲):" caddy_yn
+  echo -e "${Info} 是否由脚本自动配置HTTP服务(服务端的在线监控网站)，如果选择 N，则请在其他HTTP服务中配置网站根目录为：${Green_font_prefix}${web_file}${Font_color_suffix} [Y/n]"
+  read -erp "(默认: Y 自动部署):" caddy_yn
   [[ -z "$caddy_yn" ]] && caddy_yn="y"
   if [[ "${caddy_yn}" == [Yy] ]]; then
     caddy_file="/etc/caddy/Caddyfile" # Where is the default Caddyfile specified in Archlinux?
@@ -746,7 +758,7 @@ Install_caddy() {
       elif [[ ${release} == "archlinux" ]]; then
         pacman -Sy caddy --noconfirm
       fi
-      [[ ! -e "/usr/bin/caddy" ]] && echo -e "${Error} Caddy瀹夎澶辫触锛岃鎵嬪姩閮ㄧ讲锛學eb缃戦〉鏂囦欢浣嶇疆锛?{web_file}" && exit 1
+      [[ ! -e "/usr/bin/caddy" ]] && echo -e "${Error} Caddy安装失败，请手动部署，Web网页文件位置：${web_file}" && exit 1
       systemctl enable caddy
       echo "" >${caddy_file}
     }
@@ -761,50 +773,56 @@ http://${server_s}:${server_http_port_s} {
 EOF
     systemctl restart caddy
   else
-    echo -e "${Info} 璺宠繃 HTTP鏈嶅姟閮ㄧ讲锛岃鎵嬪姩閮ㄧ讲锛學eb缃戦〉鏂囦欢浣嶇疆锛?{web_file} 锛屽鏋滀綅缃敼鍙橈紝璇锋敞鎰忎慨鏀规湇鍔¤剼鏈枃浠?/etc/init.d/status-server 涓殑 WEB_BIN 鍙橀噺 !"
+    echo -e "${Info} 跳过 HTTP服务部署，请手动部署，Web网页文件位置：${web_file} ，如果位置改变，请注意修改服务脚本文件 /etc/init.d/status-server 中的 WEB_BIN 变量 !"
   fi
 }
 Install_ServerStatus_server() {
   Set_Mirror
-  [[ -e "${server_file}/sergate" ]] && echo -e "${Error} 妫€娴嬪埌 ServerStatus 鏈嶅姟绔凡瀹夎 !" && exit 1
+  [[ -e "${server_file}/sergate" ]] && echo -e "${Error} 检测到 ServerStatus 服务端已安装 !" && exit 1
   Set_server_port
-  echo -e "${Info} 寮€濮嬪畨瑁?閰嶇疆 渚濊禆..."
+  echo -e "${Info} 开始安装/配置 依赖..."
   Installation_dependency "server"
   Install_caddy
-  echo -e "${Info} 寮€濮嬩笅杞?瀹夎..."
+  echo -e "${Info} 开始下载/安装..."
   Download_Server_Status_server
   Install_jq
-  echo -e "${Info} 寮€濮嬩笅杞?瀹夎 鏈嶅姟鑴氭湰(init)..."
+  echo -e "${Info} 开始下载/安装 服务脚本(init)..."
   Service_Server_Status_server
-  echo -e "${Info} 寮€濮嬪啓鍏?閰嶇疆鏂囦欢..."
+  echo -e "${Info} 开始写入 配置文件..."
   Write_server_config
   Write_server_config_conf
-  echo -e "${Info} 鎵€鏈夋楠?瀹夎瀹屾瘯锛屽紑濮嬪惎鍔?.."
+  echo -e "${Info} 所有步骤 安装完毕，开始启动..."
   Start_ServerStatus_server
 }
 Install_ServerStatus_client() {
   Set_Mirror
-  [[ -e "${client_file}/status-client.py" ]] && echo -e "${Error} 妫€娴嬪埌 ServerStatus 瀹㈡埛绔凡瀹夎 !" && exit 1
+  [[ -e "${client_file}/status-client.py" ]] && echo -e "${Error} 检测到 ServerStatus 客户端已安装 !" && exit 1
   check_sys
-  echo -e "${Info} 寮€濮嬭缃?鐢ㄦ埛閰嶇疆..."
+  echo -e "${Info} 开始设置 用户配置..."
   Set_config_client
-  echo -e "${Info} 寮€濮嬪畨瑁?閰嶇疆 渚濊禆..."
+  echo -e "${Info} 开始安装/配置 依赖..."
   Installation_dependency "client"
-  echo -e "${Info} 寮€濮嬩笅杞?瀹夎..."
+  echo -e "${Info} 开始下载/安装..."
   Download_Server_Status_client
-  echo -e "${Info} 寮€濮嬩笅杞?瀹夎 鏈嶅姟鑴氭湰(init)..."
+  echo -e "${Info} 开始下载/安装 服务脚本(init)..."
   Service_Server_Status_client
-  echo -e "${Info} 寮€濮嬪啓鍏?閰嶇疆..."
+  echo -e "${Info} 开始写入 配置..."
   Read_config_client
   Modify_config_client
-  echo -e "${Info} 鎵€鏈夋楠?瀹夎瀹屾瘯锛屽紑濮嬪惎鍔?.."
+  echo -e "${Info} 所有步骤 安装完毕，开始启动..."
   Start_ServerStatus_client
 }
 Update_ServerStatus_server() {
   Set_Mirror
   check_installed_server_status
   check_pid_server
-  [[ -n ${PID} ]] && systemctl stop status-server.service
+  if [[ -n ${PID} ]]; then
+    if [[ ${release} == "archlinux" ]]; then
+      systemctl stop status-server
+    else
+      /etc/init.d/status-server stop
+    fi
+  fi
   Download_Server_Status_server
   rm -rf /etc/init.d/status-server
   Service_Server_Status_server
@@ -823,7 +841,7 @@ Update_ServerStatus_client() {
   fi
   if [[ ! -e "${client_file}/status-client.py" ]]; then
     if [[ ! -e "${file}/status-client.py" ]]; then
-      echo -e "${Error} ServerStatus 瀹㈡埛绔枃浠朵笉瀛樺湪 !" && exit 1
+      echo -e "${Error} ServerStatus 客户端文件不存在 !" && exit 1
     else
       client_text="$(sed 's/\"//g;s/,//g;s/ //g' "${file}/status-client.py")"
       rm -rf "${file}/status-client.py"
@@ -858,14 +876,13 @@ Stop_ServerStatus_server() {
 Restart_ServerStatus_server() {
   check_installed_server_status
   check_pid_server
-  [[ -n ${PID} ]] && systemctl stop status-server.service
-  systemctl start status-server.service
+  systemctl restart status-server.service
 }
 Uninstall_ServerStatus_server() {
   check_installed_server_status
-  echo "纭畾瑕佸嵏杞?ServerStatus 鏈嶅姟绔?濡傛灉鍚屾椂瀹夎浜嗗鎴风锛屽垯鍙細鍒犻櫎鏈嶅姟绔? ? [y/N]"
+  echo "确定要卸载 ServerStatus 服务端(如果同时安装了客户端，则只会删除服务端) ? [y/N]"
   echo
-  read -erp "(榛樿: n):" unyn
+  read -erp "(默认: n):" unyn
   [[ -z ${unyn} ]] && unyn="n"
   if [[ ${unyn} == [Yy] ]]; then
     check_pid_server
@@ -877,7 +894,12 @@ Uninstall_ServerStatus_server() {
     else
       rm -rf "${file}"
     fi
+    # 停用并删除服务
+    systemctl stop status-server.service
+    systemctl disable status-server.service
     rm -rf "/etc/init.d/status-server"
+    rm -rf "/usr/lib/systemd/system/status-server.service"
+    
     if [[ -e "/usr/bin/caddy" ]]; then
       systemctl stop caddy
       systemctl disable caddy
@@ -885,24 +907,15 @@ Uninstall_ServerStatus_server() {
       [[ ${release} == "centos" ]] && yum -y remove caddy
       [[ ${release} == "archlinux" ]] && pacman -R caddy --noconfirm
     fi
-    if [[ ${release} == "centos" ]]; then
-      chkconfig --del status-server
-    elif [[ ${release} == "debian" ]]; then
-      update-rc.d -f status-server remove
-    elif [[ ${release} == "archlinux" ]]; then
-      systemctl stop status-server
-      systemctl disable status-server
-      rm /usr/lib/systemd/system/status-server.service
-    fi
-    echo && echo "ServerStatus 鍗歌浇瀹屾垚 !" && echo
+    echo && echo "ServerStatus 卸载完成 !" && echo
   else
-    echo && echo "鍗歌浇宸插彇娑?.." && echo
+    echo && echo "卸载已取消..." && echo
   fi
 }
 Start_ServerStatus_client() {
   check_installed_client_status
   check_pid_client
-  [[ -n ${PID} ]] && echo -e "${Error} ServerStatus 姝ｅ湪杩愯锛岃妫€鏌?!" && exit 1
+  [[ -n ${PID} ]] && echo -e "${Error} ServerStatus 正在运行，请检查 !" && exit 1
   if [[ ${release} == "archlinux" ]]; then
     systemctl start status-client.service
   else
@@ -912,7 +925,7 @@ Start_ServerStatus_client() {
 Stop_ServerStatus_client() {
   check_installed_client_status
   check_pid_client
-  [[ -z ${PID} ]] && echo -e "${Error} ServerStatus 娌℃湁杩愯锛岃妫€鏌?!" && exit 1
+  [[ -z ${PID} ]] && echo -e "${Error} ServerStatus 没有运行，请检查 !" && exit 1
   if [[ ${release} == "archlinux" ]]; then
     systemctl stop status-client.service
   else
@@ -932,9 +945,9 @@ Restart_ServerStatus_client() {
 }
 Uninstall_ServerStatus_client() {
   check_installed_client_status
-  echo "纭畾瑕佸嵏杞?ServerStatus 瀹㈡埛绔?濡傛灉鍚屾椂瀹夎浜嗘湇鍔＄锛屽垯鍙細鍒犻櫎瀹㈡埛绔? ? [y/N]"
+  echo "确定要卸载 ServerStatus 客户端(如果同时安装了服务端，则只会删除客户端) ? [y/N]"
   echo
-  read -erp "(榛樿: n):" unyn
+  read -erp "(默认: n):" unyn
   [[ -z ${unyn} ]] && unyn="n"
   if [[ ${unyn} == [Yy] ]]; then
     check_pid_client
@@ -955,39 +968,39 @@ Uninstall_ServerStatus_client() {
       systemctl disable status-client
       rm /usr/lib/systemd/system/status-client.service
     fi
-    echo && echo "ServerStatus 鍗歌浇瀹屾垚 !" && echo
+    echo && echo "ServerStatus 卸载完成 !" && echo
   else
-    echo && echo "鍗歌浇宸插彇娑?.." && echo
+    echo && echo "卸载已取消..." && echo
   fi
 }
 View_ServerStatus_client() {
   check_installed_client_status
   Read_config_client
-  clear && echo "鈥斺€斺€斺€斺€斺€斺€斺€斺€斺€斺€斺€斺€斺€斺€斺€斺€斺€斺€斺€? && echo
-  echo -e "  ServerStatus 瀹㈡埛绔厤缃俊鎭細
+  clear && echo "————————————————————" && echo
+  echo -e "  ServerStatus 客户端配置信息：
 
   IP \t: ${Green_font_prefix}${client_server}${Font_color_suffix}
-  绔彛 \t: ${Green_font_prefix}${client_port}${Font_color_suffix}
-  璐﹀彿 \t: ${Green_font_prefix}${client_user}${Font_color_suffix}
-  瀵嗙爜 \t: ${Green_font_prefix}${client_password}${Font_color_suffix}
+  端口 \t: ${Green_font_prefix}${client_port}${Font_color_suffix}
+  账号 \t: ${Green_font_prefix}${client_user}${Font_color_suffix}
+  密码 \t: ${Green_font_prefix}${client_password}${Font_color_suffix}
   vnStat : ${Green_font_prefix}${client_vnstat}${Font_color_suffix}
 
-鈥斺€斺€斺€斺€斺€斺€斺€斺€斺€斺€斺€斺€斺€斺€斺€斺€斺€斺€斺€?
+————————————————————"
 }
 View_client_Log() {
-  [[ ! -e ${client_log_file} ]] && echo -e "${Error} 娌℃湁鎵惧埌鏃ュ織鏂囦欢 !" && exit 1
-  echo && echo -e "${Tip} 鎸?${Red_font_prefix}Ctrl+C${Font_color_suffix} 缁堟鏌ョ湅鏃ュ織" && echo -e "濡傛灉闇€瑕佹煡鐪嬪畬鏁存棩蹇楀唴瀹癸紝璇风敤 ${Red_font_prefix}cat ${client_log_file}${Font_color_suffix} 鍛戒护銆? && echo
+  [[ ! -e ${client_log_file} ]] && echo -e "${Error} 没有找到日志文件 !" && exit 1
+  echo && echo -e "${Tip} 按 ${Red_font_prefix}Ctrl+C${Font_color_suffix} 终止查看日志" && echo -e "如果需要查看完整日志内容，请用 ${Red_font_prefix}cat ${client_log_file}${Font_color_suffix} 命令。" && echo
   tail -f ${client_log_file}
 }
 View_server_Log() {
-  [[ ! -e ${server_log_file} ]] && echo -e "${Error} 娌℃湁鎵惧埌鏃ュ織鏂囦欢 !" && exit 1
-  echo && echo -e "${Tip} 鎸?${Red_font_prefix}Ctrl+C${Font_color_suffix} 缁堟鏌ョ湅鏃ュ織" && echo -e "濡傛灉闇€瑕佹煡鐪嬪畬鏁存棩蹇楀唴瀹癸紝璇风敤 ${Red_font_prefix}cat ${server_log_file}${Font_color_suffix} 鍛戒护銆? && echo
+  [[ ! -e ${server_log_file} ]] && echo -e "${Error} 没有找到日志文件 !" && exit 1
+  echo && echo -e "${Tip} 按 ${Red_font_prefix}Ctrl+C${Font_color_suffix} 终止查看日志" && echo -e "如果需要查看完整日志内容，请用 ${Red_font_prefix}cat ${server_log_file}${Font_color_suffix} 命令。" && echo
   tail -f ${server_log_file}
 }
 Update_Shell() {
   Set_Mirror
   sh_new_ver=$(wget --no-check-certificate -qO- -t1 -T3 "${link_prefix}/status.sh" | grep 'sh_ver="' | awk -F "=" '{print $NF}' | sed 's/\"//g' | head -1)
-  [[ -z ${sh_new_ver} ]] && echo -e "${Error} 鏃犳硶閾炬帴鍒?Github !" && exit 0
+  [[ -z ${sh_new_ver} ]] && echo -e "${Error} 无法链接到 Github !" && exit 0
   if [[ -e "/etc/init.d/status-client" ]] || [[ -e "/usr/lib/systemd/system/status-client.service" ]]; then
     rm -rf /etc/init.d/status-client
     rm -rf /usr/lib/systemd/system/status-client.service
@@ -999,35 +1012,48 @@ Update_Shell() {
     Service_Server_Status_server
   fi
   wget -N --no-check-certificate "${link_prefix}/status.sh" && chmod +x status.sh
-  echo -e "鑴氭湰宸叉洿鏂颁负鏈€鏂扮増鏈琜 ${sh_new_ver} ] !(娉ㄦ剰锛氬洜涓烘洿鏂版柟寮忎负鐩存帴瑕嗙洊褰撳墠杩愯鐨勮剼鏈紝鎵€浠ュ彲鑳戒笅闈細鎻愮ず涓€浜涙姤閿欙紝鏃犺鍗冲彲)" && exit 0
+  echo -e "脚本已更新为最新版本[ ${sh_new_ver} ] !(注意：因为更新方式为直接覆盖当前运行的脚本，所以可能下面会提示一些报错，无视即可)" && exit 0
 }
 menu_client() {
-  echo && echo -e "  ServerStatus 涓€閿畨瑁呯鐞嗚剼鏈?${Red_font_prefix}[v${sh_ver}]${Font_color_suffix}
+  echo && echo -e "  ServerStatus 一键安装管理脚本 ${Red_font_prefix}[v${sh_ver}]${Font_color_suffix}
   -- Toyo | doub.io/shell-jc3 --
   --    Modified by APTX    --
- ${Green_font_prefix} 0.${Font_color_suffix} 鍗囩骇鑴氭湰
- 鈥斺€斺€斺€斺€斺€斺€斺€斺€斺€斺€斺€? ${Green_font_prefix} 1.${Font_color_suffix} 瀹夎 瀹㈡埛绔? ${Green_font_prefix} 2.${Font_color_suffix} 鏇存柊 瀹㈡埛绔? ${Green_font_prefix} 3.${Font_color_suffix} 鍗歌浇 瀹㈡埛绔?鈥斺€斺€斺€斺€斺€斺€斺€斺€斺€斺€斺€? ${Green_font_prefix} 4.${Font_color_suffix} 鍚姩 瀹㈡埛绔? ${Green_font_prefix} 5.${Font_color_suffix} 鍋滄 瀹㈡埛绔? ${Green_font_prefix} 6.${Font_color_suffix} 閲嶅惎 瀹㈡埛绔?鈥斺€斺€斺€斺€斺€斺€斺€斺€斺€斺€斺€? ${Green_font_prefix} 7.${Font_color_suffix} 璁剧疆 瀹㈡埛绔厤缃? ${Green_font_prefix} 8.${Font_color_suffix} 鏌ョ湅 瀹㈡埛绔俊鎭? ${Green_font_prefix} 9.${Font_color_suffix} 鏌ョ湅 瀹㈡埛绔棩蹇?鈥斺€斺€斺€斺€斺€斺€斺€斺€斺€斺€斺€? ${Green_font_prefix}10.${Font_color_suffix} 鍒囨崲涓?鏈嶅姟绔彍鍗? && echo
+ ${Green_font_prefix} 0.${Font_color_suffix} 升级脚本
+ ————————————
+ ${Green_font_prefix} 1.${Font_color_suffix} 安装 客户端
+ ${Green_font_prefix} 2.${Font_color_suffix} 更新 客户端
+ ${Green_font_prefix} 3.${Font_color_suffix} 卸载 客户端
+————————————
+ ${Green_font_prefix} 4.${Font_color_suffix} 启动 客户端
+ ${Green_font_prefix} 5.${Font_color_suffix} 停止 客户端
+ ${Green_font_prefix} 6.${Font_color_suffix} 重启 客户端
+————————————
+ ${Green_font_prefix} 7.${Font_color_suffix} 设置 客户端配置
+ ${Green_font_prefix} 8.${Font_color_suffix} 查看 客户端信息
+ ${Green_font_prefix} 9.${Font_color_suffix} 查看 客户端日志
+————————————
+ ${Green_font_prefix}10.${Font_color_suffix} 切换为 服务端菜单" && echo
   if [[ -e "${client_file}/status-client.py" ]]; then
     check_pid_client
     if [[ -n "${PID}" ]]; then
-      echo -e " 褰撳墠鐘舵€? 瀹㈡埛绔?${Green_font_prefix}宸插畨瑁?{Font_color_suffix} 骞?${Green_font_prefix}宸插惎鍔?{Font_color_suffix}"
+      echo -e " 当前状态: 客户端 ${Green_font_prefix}已安装${Font_color_suffix} 并 ${Green_font_prefix}已启动${Font_color_suffix}"
     else
-      echo -e " 褰撳墠鐘舵€? 瀹㈡埛绔?${Green_font_prefix}宸插畨瑁?{Font_color_suffix} 浣?${Red_font_prefix}鏈惎鍔?{Font_color_suffix}"
+      echo -e " 当前状态: 客户端 ${Green_font_prefix}已安装${Font_color_suffix} 但 ${Red_font_prefix}未启动${Font_color_suffix}"
     fi
   else
     if [[ -e "${file}/status-client.py" ]]; then
       check_pid_client
       if [[ -n "${PID}" ]]; then
-        echo -e " 褰撳墠鐘舵€? 瀹㈡埛绔?${Green_font_prefix}宸插畨瑁?{Font_color_suffix} 骞?${Green_font_prefix}宸插惎鍔?{Font_color_suffix}"
+        echo -e " 当前状态: 客户端 ${Green_font_prefix}已安装${Font_color_suffix} 并 ${Green_font_prefix}已启动${Font_color_suffix}"
       else
-        echo -e " 褰撳墠鐘舵€? 瀹㈡埛绔?${Green_font_prefix}宸插畨瑁?{Font_color_suffix} 浣?${Red_font_prefix}鏈惎鍔?{Font_color_suffix}"
+        echo -e " 当前状态: 客户端 ${Green_font_prefix}已安装${Font_color_suffix} 但 ${Red_font_prefix}未启动${Font_color_suffix}"
       fi
     else
-      echo -e " 褰撳墠鐘舵€? 瀹㈡埛绔?${Red_font_prefix}鏈畨瑁?{Font_color_suffix}"
+      echo -e " 当前状态: 客户端 ${Red_font_prefix}未安装${Font_color_suffix}"
     fi
   fi
   echo
-  read -erp " 璇疯緭鍏ユ暟瀛?[0-10]:" num
+  read -erp " 请输入数字 [0-10]:" num
   case "$num" in
   0)
     Update_Shell
@@ -1063,28 +1089,41 @@ menu_client() {
     menu_server
     ;;
   *)
-    echo "璇疯緭鍏ユ纭暟瀛?[0-10]"
+    echo "请输入正确数字 [0-10]"
     ;;
   esac
 }
 menu_server() {
-  echo && echo -e "  ServerStatus 涓€閿畨瑁呯鐞嗚剼鏈?${Red_font_prefix}[v${sh_ver}]${Font_color_suffix}
+  echo && echo -e "  ServerStatus 一键安装管理脚本 ${Red_font_prefix}[v${sh_ver}]${Font_color_suffix}
   -- Toyo | doub.io/shell-jc3 --
   --    Modified by APTX    --
- ${Green_font_prefix} 0.${Font_color_suffix} 鍗囩骇鑴氭湰
- 鈥斺€斺€斺€斺€斺€斺€斺€斺€斺€斺€斺€? ${Green_font_prefix} 1.${Font_color_suffix} 瀹夎 鏈嶅姟绔? ${Green_font_prefix} 2.${Font_color_suffix} 鏇存柊 鏈嶅姟绔? ${Green_font_prefix} 3.${Font_color_suffix} 鍗歌浇 鏈嶅姟绔?鈥斺€斺€斺€斺€斺€斺€斺€斺€斺€斺€斺€? ${Green_font_prefix} 4.${Font_color_suffix} 鍚姩 鏈嶅姟绔? ${Green_font_prefix} 5.${Font_color_suffix} 鍋滄 鏈嶅姟绔? ${Green_font_prefix} 6.${Font_color_suffix} 閲嶅惎 鏈嶅姟绔?鈥斺€斺€斺€斺€斺€斺€斺€斺€斺€斺€斺€? ${Green_font_prefix} 7.${Font_color_suffix} 璁剧疆 鏈嶅姟绔厤缃? ${Green_font_prefix} 8.${Font_color_suffix} 鏌ョ湅 鏈嶅姟绔俊鎭? ${Green_font_prefix} 9.${Font_color_suffix} 鏌ョ湅 鏈嶅姟绔棩蹇?鈥斺€斺€斺€斺€斺€斺€斺€斺€斺€斺€斺€? ${Green_font_prefix}10.${Font_color_suffix} 鍒囨崲涓?瀹㈡埛绔彍鍗? && echo
+ ${Green_font_prefix} 0.${Font_color_suffix} 升级脚本
+ ————————————
+ ${Green_font_prefix} 1.${Font_color_suffix} 安装 服务端
+ ${Green_font_prefix} 2.${Font_color_suffix} 更新 服务端
+ ${Green_font_prefix} 3.${Font_color_suffix} 卸载 服务端
+————————————
+ ${Green_font_prefix} 4.${Font_color_suffix} 启动 服务端
+ ${Green_font_prefix} 5.${Font_color_suffix} 停止 服务端
+ ${Green_font_prefix} 6.${Font_color_suffix} 重启 服务端
+————————————
+ ${Green_font_prefix} 7.${Font_color_suffix} 设置 服务端配置
+ ${Green_font_prefix} 8.${Font_color_suffix} 查看 服务端信息
+ ${Green_font_prefix} 9.${Font_color_suffix} 查看 服务端日志
+————————————
+ ${Green_font_prefix}10.${Font_color_suffix} 切换为 客户端菜单" && echo
   if [[ -e "${server_file}/sergate" ]]; then
     check_pid_server
     if [[ -n "${PID}" ]]; then
-      echo -e " 褰撳墠鐘舵€? 鏈嶅姟绔?${Green_font_prefix}宸插畨瑁?{Font_color_suffix} 骞?${Green_font_prefix}宸插惎鍔?{Font_color_suffix}"
+      echo -e " 当前状态: 服务端 ${Green_font_prefix}已安装${Font_color_suffix} 并 ${Green_font_prefix}已启动${Font_color_suffix}"
     else
-      echo -e " 褰撳墠鐘舵€? 鏈嶅姟绔?${Green_font_prefix}宸插畨瑁?{Font_color_suffix} 浣?${Red_font_prefix}鏈惎鍔?{Font_color_suffix}"
+      echo -e " 当前状态: 服务端 ${Green_font_prefix}已安装${Font_color_suffix} 但 ${Red_font_prefix}未启动${Font_color_suffix}"
     fi
   else
-    echo -e " 褰撳墠鐘舵€? 鏈嶅姟绔?${Red_font_prefix}鏈畨瑁?{Font_color_suffix}"
+    echo -e " 当前状态: 服务端 ${Red_font_prefix}未安装${Font_color_suffix}"
   fi
   echo
-  read -erp " 璇疯緭鍏ユ暟瀛?[0-10]:" num
+  read -erp " 请输入数字 [0-10]:" num
   case "$num" in
   0)
     Update_Shell
@@ -1120,13 +1159,13 @@ menu_server() {
     menu_client
     ;;
   *)
-    echo "璇疯緭鍏ユ纭暟瀛?[0-10]"
+    echo "请输入正确数字 [0-10]"
     ;;
   esac
 }
 Set_Mirror() {
-  echo -e "${Info} 使用 GitHub 下载源：MJJSUN/ServerStatus-Hotaru"
-  link_prefix=${github_prefix}
+  echo -e "${Info} 请输入要选择的下载源，默认使用GitHub，中国大陆建议选择Coding.net，但是不建议将服务端部署在中国大陆主机上
+  ${Green_font_prefix} 1.${Font_color_suffix} GitHub"
 }
 check_sys
 action=$1
@@ -1139,8 +1178,3 @@ if [[ -n $action ]]; then
 else
   menu_client
 fi
-
-
-
-
-
